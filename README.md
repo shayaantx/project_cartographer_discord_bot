@@ -23,7 +23,7 @@ docker build -t discord-bot .
 ```
 3. Run following command to run the newly created image
 ```bash
-docker run discord-bot -d
+docker run -d discord-bot
 ```
 4. To see logs
 ```bash
