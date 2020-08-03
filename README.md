@@ -29,3 +29,10 @@ docker run -d discord-bot
 ```bash
 docker logs <container-name>
 ```
+
+## Credits
+https://github.com/pnill
+
+https://github.com/num0005
+
+https://github.com/bigtweekx
