@@ -3,7 +3,6 @@ const config = require('./config.json');
 const bot = new Discord.Client();
 
 const PLAYING_HALO2_ROLE = 'Playing Halo 2';
-const PLAYING_HALO2_ROLE_ID = '384951690882842625';
 const HALO2_ACTIVITY_NAME = 'Halo 2: Project Cartographer';
 
 // Connection to Discord API
@@ -35,6 +34,19 @@ function removeStaleRoles() {
 	});
 }
 
+function getPlayingHalo2Role(roles) {
+	let roleId;
+	roles.cache.filter(function(role) {
+		return role.name === PLAYING_HALO2_ROLE;
+	}).forEach(role => {
+		roleId = role.id;
+	});
+	if (!roleId) {
+		throw new Error(`Could not find role ${PLAYING_HALO2_ROLE}`)
+	}
+	return roleId;
+}
+
 // Bot connection
 bot.on('ready', function () {
 	console.log('The bot is online !');
@@ -59,7 +71,7 @@ bot.on('presenceUpdate', (oldPresence, newPresence) => {
 		activities.forEach(activity => {
 			if (activity.name === HALO2_ACTIVITY_NAME) {
 				isPlayingHalo2 = true;
-				guild.roles.fetch(PLAYING_HALO2_ROLE_ID).then((playingHalo2Role) => {
+				guild.roles.fetch(getPlayingHalo2Role(guild.roles)).then((playingHalo2Role) => {
 					newMember.roles.add(playingHalo2Role).then(function() {
 						console.log(`Role : Halo 2 given to ${newMember.user.username}`);
 					}).catch((error) => {
