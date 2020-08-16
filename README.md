@@ -30,7 +30,7 @@ docker run -d discord-bot
 docker logs <container-name>
 ```
 
-## Credits
+## Original Credits
 https://github.com/pnill
 
 https://github.com/num0005
