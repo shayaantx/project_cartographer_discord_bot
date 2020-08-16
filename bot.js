@@ -1,11 +1,11 @@
 const Discord = require('discord.js');
 const { Client, MessageEmbed } = require('discord.js');
 const config = require('./config.json');
+const xp =  require('./xp.js');
 const bot = new Discord.Client();
 const PLAYING_HALO2_ROLE = 'Playing Halo 2';
 const HALO2_ACTIVITY_NAME = 'Halo 2: Project Cartographer';
 const xpFile = 'xpData.json';
-const xp =  require('./xp.js');
 const xpBot = new xp(xpFile);
 
 
