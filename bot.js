@@ -103,7 +103,7 @@ bot.on('presenceUpdate', (oldPresence, newPresence) => {
 	}
 });
 
-
+// Feature : The bot gives members a rank based on their messages
 bot.on('message', message => {
 	if (!message.guild) return;
 	//return if message is a bot
