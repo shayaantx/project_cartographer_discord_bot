@@ -98,7 +98,7 @@ class XP {
                     throw err;
                 }
                 let xpDataRead = JSON.parse(data);
-                const lookup = this.lookupXpData(xpDataRead, message);
+                const lookup = this.lookUpAndIncrementXpData(xpDataRead, message);
                 let xpWrite = lookup['data'];
                 if (!lookup['result']) {
                     xpWrite = this.createXpData(message, xpDataRead);
