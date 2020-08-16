@@ -1,11 +1,13 @@
 const Discord = require('discord.js');
 const { Client, MessageEmbed } = require('discord.js');
 const config = require('./config.json');
-const fs = require('fs');
 const bot = new Discord.Client();
 const PLAYING_HALO2_ROLE = 'Playing Halo 2';
 const HALO2_ACTIVITY_NAME = 'Halo 2: Project Cartographer';
-const xpFile = 'xp.json';
+const xpFile = 'xpData.json';
+const xp =  require('./xp.js');
+const xpBot = new xp(xpFile);
+
 
 // Connection to Discord API
 bot.login(config.discord_token);
@@ -48,23 +50,28 @@ function getPlayingHalo2Role(roles) {
 	}
 	return roleId;
 }
-function checkIfFileExists(){
-	try {
-		if (!fs.existsSync(xpFile)) {
-			let xpData = {"xpData" : []};
-			let data = JSON.stringify(xpData)
-			fs.writeFileSync('xp.json', data);
-		}
-	} catch(err) {
-		console.error(err)
-	}
+
+//Send the message to the user letting them know they've ranked up
+function sendMessage(message, levelInfo) {
+	const embed = new MessageEmbed() 
+	   // Set the title of the field
+	   .setTitle('Congratulations ' + message.author.username + ', You have ranked up!')
+	   // Set the color of the embed
+	   .setColor(0xff0000)
+	   // Set the main content of the embed
+	   .setDescription("You've reached rank " + levelInfo + "!");
+	// Send the embed to the same channel as the message
+	message.channel.send(embed);
 }
+
 // Bot connection
 bot.on('ready', function () {
 	console.log('The bot is online !');
 	// only remove stale roles on startup
-	checkIfFileExists();
 	removeStaleRoles();
+	if(config.xp_functionality) {
+		xpBot.ready();
+	}
 });
 
 // Bot connection
@@ -104,71 +111,11 @@ bot.on('presenceUpdate', (oldPresence, newPresence) => {
 });
 
 // Feature : The bot gives members a rank based on their messages
-bot.on('message', message => {
-	if (!message.guild) return;
-	//return if message is a bot
-	if(message.author.bot) return;	
-
-	if(message.system) return;
-
-	if(message.toString().charAt(0) === '!') return;
-	//check to see if the data file exists
-	  
-
-	if(message.author.id != bot.user.id) {
-		checkIfFileExists();
-		fs.readFile(xpFile, (err, data) => {
-			if (err) throw err;
-			let xpDataRead = JSON.parse(data);
-			//console.log(xpDataRead);
-			let found = false; // flag to say if data exists in the JSON or not
-			let levelInfo;
-			for(var index in xpDataRead.xpData){
-				//we found the user data in the JSON file
-				if(xpDataRead.xpData[index].id === message.author.id){
-					found = true;
-					levelInfo = xpDataRead.xpData[index].level;
-					xpDataRead.xpData[index].numMessages = xpDataRead.xpData[index].numMessages + 1; // increment messages
-					if(xpDataRead.xpData[index].numMessages >= xpDataRead.xpData[index].messagesRequiredToNextLevel){ //if we've hit a new level
-						levelInfo = levelInfo + 1;
-						xpDataRead.xpData[index].level = xpDataRead.xpData[index].level + 1; //increment level data
-						if(levelInfo < 150){
-							xpDataRead.xpData[index].messagesRequiredToNextLevel = xpDataRead.xpData[index].messagesRequiredToNextLevel * (2 * Math.exp(-1 * ((levelInfo-1.7)/4)) + 1.02); // determines messages to the next level
-						}
-						else{
-							xpDataRead.xpData[index].messagesRequiredToNextLevel = xpDataRead.xpData[index].messagesRequiredToNextLevel + 100; //past rank 150, flat 100 message increase to next level
-						}
-						const embed = new MessageEmbed() //send the message to the user letting them know they've ranked up
-							// Set the title of the field
-							.setTitle('Congratulations ' + message.author.username + ', You have ranked up!')
-							// Set the color of the embed
-							.setColor(0xff0000)
-							// Set the main content of the embed
-							.setDescription("You've reached rank " + levelInfo + "!");
-							// Send the embed to the same channel as the message
-						message.channel.send(embed);
-					}
-				}
-			}
-			if(!found){ // if we can't find a user's info in the JSON file
-				levelInfo = 1;
-				let xpInformation = { 
-					id: message.author.id,
-					username: message.author.username,
-					level: 1,
-					numMessages: 1,
-					messagesRequiredToNextLevel: 2
-				};
-				xpDataRead.xpData.push(xpInformation);
-			}
-			
-			if(xpDataRead){
-				let data = JSON.stringify(xpDataRead);
-				fs.writeFile(xpFile, data, (err) => { //write data to file asynchronously
-					if (err) throw err;
-				});
-			}
-
+if(config.xp_functionality) {
+	bot.on('message', message => {
+		xpBot.updateXpData(message, bot.user.id , function(level){
+			sendMessage(message, level);
 		});
-	}
-  });
+	});
+}
+
