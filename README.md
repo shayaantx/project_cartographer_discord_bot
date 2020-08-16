@@ -11,7 +11,11 @@
 ## Usage
 ### Manually with nodejs
 1. Install nodejs on your OS
-2. Run the following command (in git directory) to run the bot
+2. Run the following command (in git directory) to install discord.js
+```bash
+npm install discord.js
+``` 
+3. Run the following command (in git directory) to run the bot
 ```bash
 node bot.js
 ``` 
@@ -36,3 +40,5 @@ https://github.com/pnill
 https://github.com/num0005
 
 https://github.com/bigtweekx
+
+https://github.com/StelluR

@@ -1,9 +1,13 @@
 const Discord = require('discord.js');
+const { Client, MessageEmbed } = require('discord.js');
 const config = require('./config.json');
+const xp =  require('./xp.js');
 const bot = new Discord.Client();
-
 const PLAYING_HALO2_ROLE = 'Playing Halo 2';
 const HALO2_ACTIVITY_NAME = 'Halo 2: Project Cartographer';
+const xpFile = 'xpData.json';
+const xpBot = new xp(xpFile);
+
 
 // Connection to Discord API
 bot.login(config.discord_token);
@@ -47,11 +51,27 @@ function getPlayingHalo2Role(roles) {
 	return roleId;
 }
 
+//Send the message to the user letting them know they've ranked up
+function sendMessage(message, levelInfo) {
+	const embed = new MessageEmbed() 
+	   // Set the title of the field
+	   .setTitle('Congratulations ' + message.author.username + ', You have ranked up!')
+	   // Set the color of the embed
+	   .setColor(0xff0000)
+	   // Set the main content of the embed
+	   .setDescription("You've reached rank " + levelInfo + "!");
+	// Send the embed to the same channel as the message
+	message.channel.send(embed);
+}
+
 // Bot connection
 bot.on('ready', function () {
 	console.log('The bot is online !');
 	// only remove stale roles on startup
 	removeStaleRoles();
+	if(config.xp_functionality) {
+		xpBot.ready();
+	}
 });
 
 // Bot connection
@@ -89,3 +109,13 @@ bot.on('presenceUpdate', (oldPresence, newPresence) => {
 		checkAndRemoveHalo2Role(newMember);
 	}
 });
+
+// Feature : The bot gives members a rank based on their messages
+if(config.xp_functionality) {
+	bot.on('message', message => {
+		xpBot.updateXpData(message, bot.user.id , function(level){
+			sendMessage(message, level);
+		});
+	});
+}
+
