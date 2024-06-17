@@ -1,10 +1,20 @@
 const Discord = require('discord.js');
-const { Client, MessageEmbed } = require('discord.js');
+const { Client, EmbedBuilder, GatewayIntentBits, Partials } = require('discord.js');
 const config = require('./config.json');
 const xp =  require('./xp.js');
-const bot = new Discord.Client();
+const bot = new Client({
+    intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMembers,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.MessageContent,
+		GatewayIntentBits.GuildPresences,
+    ],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction]
+});
+
 const PLAYING_HALO2_ROLE = 'Playing Halo 2';
-const HALO2_ACTIVITY_NAME = 'Halo 2: Project Cartographer';
+const HALO2_ACTIVITY_NAME = 'Halo 2 Project Cartographer';
 const xpFile = 'xpData.json';
 const xpBot = new xp(xpFile);
 
@@ -22,46 +32,43 @@ function removeRole(guildMember, role) {
 }
 
 function checkAndRemoveHalo2Role(guildMember) {
-	guildMember.roles.cache.filter(function(role) {
-		return role.name === PLAYING_HALO2_ROLE;
-	}).forEach(role => {
-		removeRole(guildMember, role);
-	});
+	guildMember.roles.cache.filter(role => role.name === PLAYING_HALO2_ROLE)
+	.forEach(role => {
+        removeRole(guildMember, role);
+    });
 }
 
 function removeStaleRoles() {
 	// For each guild, member, and role
 	bot.guilds.cache.forEach(guild => {
-		guild.members.cache.forEach(member => {
-			checkAndRemoveHalo2Role(member);
-		});
-	});
+        guild.members.fetch().then(members => {
+            members.forEach(member => {
+                checkAndRemoveHalo2Role(member);
+            });
+        }).catch(console.error);
+    });
 }
 
 function getPlayingHalo2Role(roles) {
 	let roleId;
-	roles.cache.filter(function(role) {
-		return role.name === PLAYING_HALO2_ROLE;
-	}).forEach(role => {
+
+	roles.cache.filter(role => role.name === PLAYING_HALO2_ROLE).forEach(role => {
 		roleId = role.id;
 	});
 	if (!roleId) {
-		throw new Error(`Could not find role ${PLAYING_HALO2_ROLE}`)
+		throw new Error(`Could not find role ${PLAYING_HALO2_ROLE}`);
 	}
 	return roleId;
 }
 
 //Send the message to the user letting them know they've ranked up
 function sendMessage(message, levelInfo) {
-	const embed = new MessageEmbed() 
-	   // Set the title of the field
-	   .setTitle('Congratulations ' + message.author.username + ', You have ranked up!')
-	   // Set the color of the embed
-	   .setColor(0xff0000)
-	   // Set the main content of the embed
-	   .setDescription("You've reached rank " + levelInfo + "!");
+	const embed = new EmbedBuilder()
+		.setTitle('Congratulations ' + message.author.username + ', You have ranked up!')
+		.setColor(0xff0000)
+		.setDescription("You've reached rank " + levelInfo + "!");
 	// Send the embed to the same channel as the message
-	message.channel.send(embed);
+	message.channel.send({ embeds: [embed] });
 }
 
 // Bot connection
@@ -84,7 +91,8 @@ bot.on('disconnect', function () {
 bot.on('presenceUpdate', (oldPresence, newPresence) => {
 	const newMember = newPresence.member;
 	const guild = newMember.guild;
-	const activities = newMember.user.presence.activities;
+	const activities = newPresence.activities;
+	const displayName = newMember.nickname || newMember.user.username;
 
 	let isPlayingHalo2 = false;
 	if (activities) {
@@ -92,12 +100,17 @@ bot.on('presenceUpdate', (oldPresence, newPresence) => {
 			if (activity.name === HALO2_ACTIVITY_NAME) {
 				isPlayingHalo2 = true;
 				guild.roles.fetch(getPlayingHalo2Role(guild.roles)).then((playingHalo2Role) => {
-					newMember.roles.add(playingHalo2Role).then(function() {
-						console.log(`Role : Halo 2 given to ${newMember.user.username}`);
-					}).catch((error) => {
-						console.log(`Error trying to add halo 2 role for user ${newMember.user.username}, error=${error}`)
-					});
+
+					if (!newMember.roles.cache.has(playingHalo2Role.id)) {
+						newMember.roles.add(playingHalo2Role).then(function() {
+							console.log(`Role : Halo 2 given to ${displayName}`);
+						}).catch((error) => {
+							console.log(error)
+							console.log(`Error trying to add halo 2 role for user ${displayName}, error=${error}`)
+						});
+					}
 				}).catch((error) => {
+					console.log(error)
 					console.log(`Could not find playing halo 2 role error=${error}`)
 				})
 			}
@@ -105,14 +118,13 @@ bot.on('presenceUpdate', (oldPresence, newPresence) => {
 	}
 
 	if (!isPlayingHalo2) {
-		// remove the role if not playing anymore
 		checkAndRemoveHalo2Role(newMember);
 	}
 });
 
 // Feature : The bot gives members a rank based on their messages
 if(config.xp_functionality) {
-	bot.on('message', message => {
+	bot.on('messageCreate', message => {
 		xpBot.updateXpData(message, bot.user.id , function(level){
 			sendMessage(message, level);
 		});
